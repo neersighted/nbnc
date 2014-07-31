@@ -63,7 +63,7 @@ func _main() {
 		}
 
 		// Hand the connection off to a goroutine.
-		go func() {
+		go func(conn net.Conn) {
 			var (
 				clientSock net.Conn
 				client     *Connection
@@ -125,7 +125,7 @@ func _main() {
 					break For
 				}
 			}
-		}()
+		}(conn)
 	}
 }
 
