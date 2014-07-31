@@ -16,7 +16,7 @@ func authConnection(conn *Connection) bool {
 	auth = make(chan bool, 1)
 
 	// Run the authentication task as a goroutine so we can have a timeout.
-	go readAuth(conn.Incoming, auth)
+	go checkAuth(conn.Incoming, auth)
 
 	select {
 	case res = <-auth:
@@ -27,7 +27,7 @@ func authConnection(conn *Connection) bool {
 	}
 }
 
-func readAuth(client chan string, result chan bool) {
+func checkAuth(client <-chan string, result chan<- bool) {
 	var (
 		attempt int
 		data    string

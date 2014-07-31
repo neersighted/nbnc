@@ -1,6 +1,6 @@
 package main
 
-func pipe(in, out chan string) {
+func pipe(in <-chan string, out chan<- string) {
 	var data string
 
 	for {

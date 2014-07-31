@@ -16,7 +16,7 @@ type Connection struct {
 	Complete chan bool
 }
 
-func (conn *Connection) Read(done, writeDone chan bool) {
+func (conn *Connection) Read(done chan<- bool, writeDone <-chan bool) {
 	var (
 		data string
 		err  error
@@ -42,7 +42,7 @@ For:
 	done <- true
 }
 
-func (conn *Connection) Write(done, readDone chan bool) {
+func (conn *Connection) Write(done chan<- bool, readDone <-chan bool) {
 	var (
 		data string
 		err  error
@@ -114,7 +114,7 @@ func NewConnection(sock net.Conn) *Connection {
 
 	conn.Listen(readDone, writeDone)
 
-	go func(complete, readDone, writeDone chan bool) {
+	go func(complete chan<- bool, readDone, writeDone <-chan bool) {
 	For:
 		for {
 			select {

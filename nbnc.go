@@ -12,6 +12,7 @@ const (
 	Name        string = "nbnc"
 	Version     string = "0.0.1"
 	Description string = "simple null (transparent) bnc"
+	Timeout     int    = 15
 )
 
 var (
