@@ -2,10 +2,10 @@ package main
 
 import (
 	"github.com/codegangsta/cli"
+	"fmt"
 	"log"
 	"net"
 	"os"
-	"strings"
 )
 
 const (
@@ -21,9 +21,9 @@ var (
 
 type Options struct {
 	ListenAddr  string
-	ListenPort  string
+	ListenPort  int
 	ConnectAddr string
-	ConnectPort string
+	ConnectPort int
 
 	Password string
 }
@@ -33,7 +33,7 @@ func _main() {
 	log.Printf("%s %s",
 		Name, Version)
 	// Also print exactly what we're doing.
-	log.Printf("Proxying %s:%s -> %s:%s",
+	log.Printf("Proxying %s:%d -> %s:%d",
 		opt.ListenAddr, opt.ListenPort,
 		opt.ConnectAddr, opt.ConnectPort)
 	log.Printf("Authenticating clients with password '%s'.",
@@ -45,7 +45,7 @@ func _main() {
 	)
 
 	// Bind to the listening socket.
-	listener, err = net.Listen("tcp", strings.Join([]string{opt.ListenAddr, opt.ListenPort}, ":"))
+	listener, err = net.Listen("tcp", fmt.Sprintf("%s:%d", opt.ListenAddr, opt.ListenPort))
 	if err != nil {
 		log.Fatalf("Error binding to socket: %s", err)
 	}
@@ -87,14 +87,11 @@ func _main() {
 
 			// Attempt to authenticate the client.
 			if !authConnection(client) {
-				log.Printf("Got bad authentication from %s.", client.Address)
 				return
 			}
 
-			log.Printf("Got good authentication from %s.", client.Address)
-
 			// Spawn the remote connection.
-			remoteSock, err = net.Dial("tcp", strings.Join([]string{opt.ConnectAddr, opt.ConnectPort}, ":"))
+			remoteSock, err = net.Dial("tcp", fmt.Sprintf("%s:%d", opt.ConnectAddr, opt.ConnectPort))
 			if err != nil {
 				log.Printf("Error opening connection: %s", err)
 				return
@@ -138,17 +135,17 @@ func main() {
 	app.Usage = Description
 	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "l, laddr", Value: "0.0.0.0", Usage: "Address to listen on."},
-		cli.StringFlag{Name: "L, lport", Value: "1337", Usage: "Port to listen on."},
+		cli.IntFlag{Name: "L, lport", Value: 1337, Usage: "Port to listen on."},
 		cli.StringFlag{Name: "c, caddr", Value: "127.0.0.1", Usage: "Address to connect to."},
-		cli.StringFlag{Name: "C, cport", Value: "6667", Usage: "Port to connect to."},
+		cli.IntFlag{Name: "C, cport", Value: 6667, Usage: "Port to connect to."},
 		cli.StringFlag{Name: "p, pass", Value: "opensesame", Usage: "Password to authenticate against."},
 	}
 	app.Action = func(c *cli.Context) {
 		// Parse options.
 		opt.ListenAddr = c.String("laddr")
-		opt.ListenPort = c.String("lport")
+		opt.ListenPort = c.Int("lport")
 		opt.ConnectAddr = c.String("caddr")
-		opt.ConnectPort = c.String("cport")
+		opt.ConnectPort = c.Int("cport")
 		opt.Password = c.String("pass")
 
 		// Call real main().
