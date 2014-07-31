@@ -1,18 +1,21 @@
 package main
 
 import (
-	"github.com/codegangsta/cli"
 	"fmt"
+	"github.com/codegangsta/cli"
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 const (
 	Name        string = "nbnc"
 	Version     string = "0.0.1"
 	Description string = "simple null (transparent) bnc"
-	Timeout     int    = 15
+
+	AuthTimeout  time.Duration = 15
+	AuthAttempts int           = 2
 )
 
 var (
@@ -30,24 +33,29 @@ type Options struct {
 
 func _main() {
 	// Print program information.
-	log.Printf("%s %s",
-		Name, Version)
+	log.Printf("%s %s", Name, Version)
 	// Also print exactly what we're doing.
-	log.Printf("Proxying %s:%d -> %s:%d",
+	log.Printf("Proxying %s:%d -> %s:%d, using password '%s'.",
 		opt.ListenAddr, opt.ListenPort,
-		opt.ConnectAddr, opt.ConnectPort)
-	log.Printf("Authenticating clients with password '%s'.",
+		opt.ConnectAddr, opt.ConnectPort,
 		opt.Password)
 
 	var (
+		address  *net.TCPAddr
 		listener net.Listener
 		err      error
 	)
 
-	// Bind to the listening socket.
-	listener, err = net.Listen("tcp", fmt.Sprintf("%s:%d", opt.ListenAddr, opt.ListenPort))
+	// Check the address.
+	address, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", opt.ListenAddr, opt.ListenPort))
 	if err != nil {
-		log.Fatalf("Error binding to socket: %s", err)
+		log.Fatalf("Error resolving address: %s", err)
+	}
+
+	// Bind to the listening socket.
+	listener, err = net.ListenTCP("tcp", address)
+	if err != nil {
+		log.Fatalf("Error binding to address: %s", err)
 	}
 
 	// For and accept connections.
