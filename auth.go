@@ -1,13 +1,36 @@
 package main
 
 import (
+	"log"
 	"regexp"
+	"time"
 )
 
 func authConnection(conn *Connection) bool {
 	var (
-		data    string
+		res  bool
+		auth chan bool
+	)
+
+	// Create the channel to get our result back from.
+	auth = make(chan bool, 1)
+
+	// Run the authentication task as a goroutine so we can have a timeout.
+	go readAuth(conn.Incoming, auth)
+
+	select {
+	case res = <-auth:
+		return res
+	case <-time.After(time.Second * 10):
+		log.Printf("Authentication for %s timed out.", conn.Address)
+		return false
+	}
+}
+
+func readAuth(client chan string, result chan bool) {
+	var (
 		attempt int
+		data    string
 
 		pass *regexp.Regexp
 	)
@@ -15,19 +38,19 @@ func authConnection(conn *Connection) bool {
 	pass = regexp.MustCompile(`^PASS ` + opt.Password + `\r?\n?$`)
 
 	attempt = 0
-	for data = range conn.Incoming {
+	for data = range client {
 		if pass.MatchString(data) {
-			return true
+			result <- true
+			return
 		}
 
 		if attempt > 1 {
-			break
+			result <- false
+			return
 		}
 
 		attempt++
 	}
-
-	return false
 }
 
 // vi: ts=4
