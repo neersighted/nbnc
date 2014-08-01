@@ -28,10 +28,20 @@ type Options struct {
 	ConnectAddr string
 	ConnectPort int
 
+	ForceV4 bool
+	ForceV6 bool
+
 	Password string
 }
 
 func _main() {
+	var (
+		proto    string
+		address  *net.TCPAddr
+		listener net.Listener
+		err      error
+	)
+
 	// Print program information.
 	log.Printf("%s %s", Name, Version)
 	// Also print exactly what we're doing.
@@ -40,20 +50,25 @@ func _main() {
 		opt.ConnectAddr, opt.ConnectPort,
 		opt.Password)
 
-	var (
-		address  *net.TCPAddr
-		listener net.Listener
-		err      error
-	)
+	// Figure out which ip version we're using.
+	if opt.ForceV4 && !opt.ForceV6 {
+		log.Print("Connecting using IPv4 only.")
+		proto = "tcp4"
+	} else if opt.ForceV6 && !opt.ForceV4 {
+		log.Print("Connecting using IPv6 only.")
+		proto = "tcp6"
+	} else {
+		proto = "tcp"
+	}
 
 	// Check the address.
-	address, err = net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", opt.ListenAddr, opt.ListenPort))
+	address, err = net.ResolveTCPAddr(proto, fmt.Sprintf("%s:%d", opt.ListenAddr, opt.ListenPort))
 	if err != nil {
 		log.Fatalf("Error resolving address: %s", err)
 	}
 
 	// Bind to the listening socket.
-	listener, err = net.ListenTCP("tcp", address)
+	listener, err = net.ListenTCP(proto, address)
 	if err != nil {
 		log.Fatalf("Error binding to address: %s", err)
 	}
@@ -99,7 +114,7 @@ func _main() {
 			}
 
 			// Spawn the remote connection.
-			remoteSock, err = net.Dial("tcp", fmt.Sprintf("%s:%d", opt.ConnectAddr, opt.ConnectPort))
+			remoteSock, err = net.Dial(proto, fmt.Sprintf("%s:%d", opt.ConnectAddr, opt.ConnectPort))
 			if err != nil {
 				log.Printf("Error opening connection: %s", err)
 				return
@@ -146,6 +161,8 @@ func main() {
 		cli.IntFlag{Name: "L, lport", Value: 1337, Usage: "Port to listen on."},
 		cli.StringFlag{Name: "c, caddr", Value: "127.0.0.1", Usage: "Address to connect to."},
 		cli.IntFlag{Name: "C, cport", Value: 6667, Usage: "Port to connect to."},
+		cli.BoolFlag{Name: "4", Usage: "Force connection to use IPv4."},
+		cli.BoolFlag{Name: "6", Usage: "Force connection to use IPv6."},
 		cli.StringFlag{Name: "p, pass", Value: "opensesame", Usage: "Password to authenticate against."},
 	}
 	app.Action = func(c *cli.Context) {
@@ -154,6 +171,10 @@ func main() {
 		opt.ListenPort = c.Int("lport")
 		opt.ConnectAddr = c.String("caddr")
 		opt.ConnectPort = c.Int("cport")
+
+		opt.ForceV4 = c.Bool("4")
+		opt.ForceV6 = c.Bool("6")
+
 		opt.Password = c.String("pass")
 
 		// Call real main().
