@@ -23,10 +23,11 @@ var (
 )
 
 type Options struct {
-	ListenAddr  string
-	ListenPort  int
-	ConnectAddr string
-	ConnectPort int
+	ListenAddr string
+	ListenPort int
+	RemoteAddr string
+	RemotePort int
+	OutAddr    string
 
 	ForceV4 bool
 	ForceV6 bool
@@ -36,10 +37,12 @@ type Options struct {
 
 func _main() {
 	var (
-		proto    string
-		address  *net.TCPAddr
-		listener net.Listener
-		err      error
+		proto string
+
+		lsrv  net.Listener
+		laddr *net.TCPAddr
+
+		err error
 	)
 
 	// Print program information.
@@ -47,8 +50,13 @@ func _main() {
 	// Also print exactly what we're doing.
 	log.Printf("Proxying %s:%d -> %s:%d, using password '%s'.",
 		opt.ListenAddr, opt.ListenPort,
-		opt.ConnectAddr, opt.ConnectPort,
+		opt.RemoteAddr, opt.RemotePort,
 		opt.Password)
+
+	// Let us know if we're using a specific address.
+	if len(opt.OutAddr) != 0 {
+		log.Printf("Connecting using %s only.", opt.OutAddr)
+	}
 
 	// Figure out which ip version we're using.
 	if opt.ForceV4 && !opt.ForceV6 {
@@ -61,14 +69,14 @@ func _main() {
 		proto = "tcp"
 	}
 
-	// Check the address.
-	address, err = net.ResolveTCPAddr(proto, fmt.Sprintf("%s:%d", opt.ListenAddr, opt.ListenPort))
+	// Resolve the listen address.
+	laddr, err = net.ResolveTCPAddr(proto, fmt.Sprintf("%s:%d", opt.ListenAddr, opt.ListenPort))
 	if err != nil {
-		log.Fatalf("Error resolving address: %s", err)
+		log.Fatalf("Error resolving listen address: %s", err)
 	}
 
 	// Bind to the listening socket.
-	listener, err = net.ListenTCP(proto, address)
+	lsrv, err = net.ListenTCP(proto, laddr)
 	if err != nil {
 		log.Fatalf("Error binding to address: %s", err)
 	}
@@ -81,7 +89,7 @@ func _main() {
 		)
 
 		// Block until we get a connection.
-		conn, err = listener.Accept()
+		conn, err = lsrv.Accept()
 		if err != nil {
 			log.Printf("Error accepting client connection: %s", err)
 		}
@@ -89,59 +97,74 @@ func _main() {
 		// Hand the connection off to a goroutine.
 		go func(conn net.Conn) {
 			var (
-				clientSock net.Conn
-				client     *Connection
-				remoteSock net.Conn
-				remote     *Connection
+				raddr *net.TCPAddr
+				oaddr *net.TCPAddr
+
+				csock net.Conn
+				rsock net.Conn
+
+				cconn *Connection
+				rconn *Connection
 			)
 
 			// Pick up the accepted connection.
-			clientSock = conn
+			csock = conn
 
 			// Create a new connection object for the client.
-			client = NewConnection(clientSock)
+			cconn = NewConnection(csock)
 			// Always close the client socket.
-			defer func(client *Connection) {
-				log.Printf("Closed client connection from %s.", client.Address)
-				client.Close()
-			}(client)
+			defer func(cconn *Connection) {
+				log.Printf("Closed client connection from %s.", cconn.Address)
+				cconn.Close()
+			}(cconn)
 
-			log.Printf("Accepted client connection from %s.", client.Address)
+			log.Printf("Accepted client connection from %s.", cconn.Address)
 
 			// Attempt to authenticate the client.
-			if !authConnection(client) {
+			if !authConnection(cconn) {
 				return
 			}
 
-			// Spawn the remote connection.
-			remoteSock, err = net.Dial(proto, fmt.Sprintf("%s:%d", opt.ConnectAddr, opt.ConnectPort))
+			// Resolve the outgoing address.
+			oaddr, err = net.ResolveTCPAddr(proto, fmt.Sprintf("%s:", opt.OutAddr))
+			if err != nil {
+				log.Fatalf("Error resolving connection address: %s", err)
+			}
+			// Resolve the remote address.
+			raddr, err = net.ResolveTCPAddr(proto, fmt.Sprintf("%s:%d", opt.RemoteAddr, opt.RemotePort))
+			if err != nil {
+				log.Fatalf("Error resolving remote address: %s", err)
+			}
+
+			// Open the remote connection.
+			rsock, err = net.DialTCP(proto, oaddr, raddr)
 			if err != nil {
 				log.Printf("Error opening connection: %s", err)
 				return
 			}
 
 			// Create a new connection object for the remote.
-			remote = NewConnection(remoteSock)
+			rconn = NewConnection(rsock)
 			// Always close the remote socket.
-			defer func(remote *Connection) {
-				log.Printf("Closed remote connection to %s.", remote.Address)
-				remote.Close()
-			}(remote)
+			defer func(rconn *Connection) {
+				log.Printf("Closed remote connection to %s.", rconn.Address)
+				rconn.Close()
+			}(rconn)
 
-			log.Printf("Opened remote connection to %s.", remote.Address)
+			log.Printf("Opened remote connection to %s.", rconn.Address)
 
 			// Link the client to the server.
-			go pipe(remote.Incoming, client.Outgoing)
-			go pipe(client.Incoming, remote.Outgoing)
+			go pipe(rconn.Incoming, cconn.Outgoing)
+			go pipe(cconn.Incoming, rconn.Outgoing)
 
 		For:
 			// Block until the connection completes.
 			for {
 				select {
-				case <-client.Complete:
+				case <-cconn.Complete:
 					log.Print("Client hung up, tearing down.")
 					break For
-				case <-remote.Complete:
+				case <-rconn.Complete:
 					log.Print("Remote hung up, tearing down.")
 					break For
 				}
@@ -157,20 +180,22 @@ func main() {
 	app.Version = Version
 	app.Usage = Description
 	app.Flags = []cli.Flag{
-		cli.StringFlag{Name: "l, laddr", Value: "0.0.0.0", Usage: "Address to listen on."},
-		cli.IntFlag{Name: "L, lport", Value: 1337, Usage: "Port to listen on."},
-		cli.StringFlag{Name: "c, caddr", Value: "127.0.0.1", Usage: "Address to connect to."},
-		cli.IntFlag{Name: "C, cport", Value: 6667, Usage: "Port to connect to."},
+		cli.StringFlag{Name: "l, laddr", Usage: "Local address to listen on.", Value: "0.0.0.0"},
+		cli.IntFlag{Name: "L, lport", Usage: "Local port to listen on.", Value: 1337},
+		cli.StringFlag{Name: "r, raddr", Usage: "Remote address to connect to.", Value: "127.0.0.1"},
+		cli.IntFlag{Name: "R, rport", Usage: "Remote port to connect to.", Value: 6667},
+		cli.StringFlag{Name: "o, oaddr", Usage: "Outgoing address to connect with."},
 		cli.BoolFlag{Name: "4", Usage: "Force connection to use IPv4."},
 		cli.BoolFlag{Name: "6", Usage: "Force connection to use IPv6."},
-		cli.StringFlag{Name: "p, pass", Value: "opensesame", Usage: "Password to authenticate against."},
+		cli.StringFlag{Name: "p, pass", Usage: "Password to authenticate against.", Value: "opensesame"},
 	}
 	app.Action = func(c *cli.Context) {
 		// Parse options.
 		opt.ListenAddr = c.String("laddr")
 		opt.ListenPort = c.Int("lport")
-		opt.ConnectAddr = c.String("caddr")
-		opt.ConnectPort = c.Int("cport")
+		opt.RemoteAddr = c.String("raddr")
+		opt.RemotePort = c.Int("rport")
+		opt.OutAddr = c.String("oaddr")
 
 		opt.ForceV4 = c.Bool("4")
 		opt.ForceV6 = c.Bool("6")
