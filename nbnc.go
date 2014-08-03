@@ -76,9 +76,9 @@ func _main() {
 	}
 
 	// Bind to the listening socket.
-	lsrv, err = net.ListenTCP(proto, laddr)
+	lsrv, err = net.ListenTCP("tcp", laddr)
 	if err != nil {
-		log.Fatalf("Error binding to address: %s", err)
+		log.Fatalf("Error binding to socket: %s", err)
 	}
 
 	// For and accept connections.
