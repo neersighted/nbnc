@@ -79,7 +79,7 @@ func (conn *Connection) Close() {
 	conn.Socket.Close()
 }
 
-func NewConnection(conn net.Conn) *Connection {
+func NewConnection(sock net.Conn) *Connection {
 	var (
 		writer *bufio.Writer
 		reader *bufio.Reader
@@ -91,16 +91,16 @@ func NewConnection(conn net.Conn) *Connection {
 	)
 
 	// Create bufio readers/writers.
-	writer = bufio.NewWriter(conn)
-	reader = bufio.NewReader(conn)
+	writer = bufio.NewWriter(sock)
+	reader = bufio.NewReader(sock)
 
 	// Create a master notification channel.
 	complete = make(chan bool, 1)
 
 	// Initialize the connection object.
 	conn = &Connection{
-		Socket:   conn,
-		Address:  conn.RemoteAddr(),
+		Socket:   sock,
+		Address:  sock.RemoteAddr(),
 		Reader:   reader,
 		Writer:   writer,
 		Incoming: make(chan string),
