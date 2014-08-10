@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"github.com/codegangsta/cli"
 	"log"
@@ -11,7 +12,7 @@ import (
 
 const (
 	Name        string = "nbnc"
-	Version     string = "0.1.1"
+	Version     string = "0.2.1"
 	Description string = "simple null (transparent) bnc"
 
 	AuthTimeout  time.Duration = 15
@@ -28,6 +29,9 @@ type Options struct {
 	RemoteAddr string
 	RemotePort int
 	OutAddr    string
+
+	RemoteSSL    bool
+	RemoteVerify bool
 
 	ForceV4 bool
 	ForceV6 bool
@@ -105,6 +109,8 @@ func _main() {
 
 				cconn *Connection
 				rconn *Connection
+
+				tconf tls.Config
 			)
 
 			// Pick up the accepted connection.
@@ -141,6 +147,11 @@ func _main() {
 			if err != nil {
 				log.Printf("Error opening connection: %s", err)
 				return
+			}
+
+			if opt.RemoteSSL {
+				tconf = tls.Config{ServerName: opt.RemoteAddr, InsecureSkipVerify: opt.RemoteVerify}
+				rsock = tls.Client(rsock, &tconf)
 			}
 
 			// Create a new connection object for the remote.
@@ -185,6 +196,8 @@ func main() {
 		cli.StringFlag{Name: "r, raddr", Usage: "Remote address to connect to.", Value: "127.0.0.1"},
 		cli.IntFlag{Name: "R, rport", Usage: "Remote port to connect to.", Value: 6667},
 		cli.StringFlag{Name: "o, oaddr", Usage: "Outgoing address to connect with."},
+		cli.BoolFlag{Name: "s, ssl", Usage: "Connect with SSL."},
+		cli.BoolFlag{Name: "S, verify", Usage: "Don't verify SSL certificates."},
 		cli.BoolFlag{Name: "4", Usage: "Force connection to use IPv4."},
 		cli.BoolFlag{Name: "6", Usage: "Force connection to use IPv6."},
 		cli.StringFlag{Name: "p, pass", Usage: "Password to authenticate against.", Value: "opensesame"},
@@ -196,6 +209,9 @@ func main() {
 		opt.RemoteAddr = c.String("raddr")
 		opt.RemotePort = c.Int("rport")
 		opt.OutAddr = c.String("oaddr")
+
+		opt.RemoteSSL = c.Bool("ssl")
+		opt.RemoteVerify = c.Bool("verify")
 
 		opt.ForceV4 = c.Bool("4")
 		opt.ForceV6 = c.Bool("6")

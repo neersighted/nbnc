@@ -31,6 +31,7 @@ For:
 		default:
 			data, err = conn.Reader.ReadString('\n')
 			if err != nil {
+				log.Printf("Read error: %s", err)
 				break For
 			}
 
@@ -57,11 +58,13 @@ For:
 		case data = <-conn.Outgoing:
 			_, err = conn.Writer.WriteString(data)
 			if err != nil {
+				log.Printf("Write error: %s", err)
 				break For
 			}
 
 			err = conn.Writer.Flush()
 			if err != nil {
+				log.Printf("Write error: %s", err)
 				break For
 			}
 		}
