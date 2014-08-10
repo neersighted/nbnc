@@ -11,22 +11,24 @@ interface.
 
     NAME:
        nbnc - simple null (transparent) bnc
-    
+
     USAGE:
        nbnc [global options] command [command options] [arguments...]
-    
+
     VERSION:
-       0.0.1
-    
+       0.2.1
+
     COMMANDS:
        help, h      Shows a list of commands or help for one command
-    
+
     GLOBAL OPTIONS:
        -l, --laddr '0.0.0.0'        Local address to listen on.
        -L, --lport '1337'           Local port to listen on.
        -r, --raddr '127.0.0.1'      Remote address to connect to.
        -R, --rport '6667'           Remote port to connect to.
        -o, --oaddr                  Outgoing address to connect with.
+       -s, --ssl                    Connect with SSL.
+       -S, --verify                 Don't verify SSL certificates.
        -4                           Force connection to use IPv4.
        -6                           Force connection to use IPv6.
        -p, --pass 'opensesame'      Password to authenticate against.
