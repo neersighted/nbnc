@@ -16,7 +16,7 @@ interface.
        nbnc [global options] command [command options] [arguments...]
 
     VERSION:
-       0.2.1
+       0.2.2
 
     COMMANDS:
        help, h      Shows a list of commands or help for one command

@@ -35,8 +35,11 @@ For:
 				break For
 			}
 
-			log.Printf("[%s] %s", conn.Socket.RemoteAddr(), data)
 			conn.Incoming <- data
+			// Log if we're verbose.
+			if opt.Log {
+				log.Printf("[%s] %s", conn.Socket.RemoteAddr(), data)
+			}
 		}
 	}
 

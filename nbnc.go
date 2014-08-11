@@ -12,7 +12,7 @@ import (
 
 const (
 	Name        string = "nbnc"
-	Version     string = "0.2.1"
+	Version     string = "0.2.2"
 	Description string = "simple null (transparent) bnc"
 
 	AuthTimeout  time.Duration = 15
@@ -37,6 +37,8 @@ type Options struct {
 	ForceV6 bool
 
 	Password string
+
+	Log bool
 }
 
 func _main() {
@@ -201,6 +203,7 @@ func main() {
 		cli.BoolFlag{Name: "4", Usage: "Force connection to use IPv4."},
 		cli.BoolFlag{Name: "6", Usage: "Force connection to use IPv6."},
 		cli.StringFlag{Name: "p, pass", Usage: "Password to authenticate against.", Value: "opensesame"},
+		cli.BoolFlag{Name: "l, log", Usage: "Log IRC traffic."},
 	}
 	app.Action = func(c *cli.Context) {
 		// Parse options.
@@ -217,6 +220,8 @@ func main() {
 		opt.ForceV6 = c.Bool("6")
 
 		opt.Password = c.String("pass")
+
+		opt.Log = c.Bool("log")
 
 		// Call real main().
 		_main()
