@@ -1,0 +1,9 @@
+listen = ":6667"
+
+[bouncer.freenode]
+target = "irc.freenode.net:6697"
+secure = true
+
+[bouncer.oftc]
+target = "irc.oftc.net:6697"
+secure = true
