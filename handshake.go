@@ -41,7 +41,8 @@ func seekshake(reader *bufio.Reader, config *Config, match chan *BouncerConfig) 
 	// Read lines from the client and try to match them against our handshake.
 	var attempt int
 	for attempt < config.Auth.Attempts {
-		data, _, err := reader.ReadLine(); if err != nil {
+		data, _, err := reader.ReadLine()
+		if err != nil {
 			log.Println(err)
 		}
 

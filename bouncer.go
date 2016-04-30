@@ -68,8 +68,14 @@ func bounce(client net.Conn, config *Config) {
 		return
 	}
 
-	// Create a correctly bound local dialer.
-	var dialer net.Dialer = net.Dialer{LocalAddr: &net.TCPAddr{IP: net.ParseIP(bouncer.Bind)}}
+	// Resolve the outgoing address.
+	var bind *net.TCPAddr
+	if bind, err = net.ResolveTCPAddr("tcp", bouncer.Bind + ":0"); err != nil {
+		log.Println(err)
+		return
+	}
+	// Create a correctly bound dialer.
+	var dialer net.Dialer = net.Dialer{LocalAddr: bind}
 
 	// Connect to the remote server.
 	var server net.Conn
