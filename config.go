@@ -5,16 +5,14 @@ import (
 	"fmt"
 	"github.com/BurntSushi/toml"
 	"io/ioutil"
-	"time"
 )
 
 type Config struct {
 	Debug bool
 
 	Listen string
-
-	Cert string
-	Key  string
+	Cert   string
+	Key    string
 
 	Auth AuthConfig
 
@@ -23,7 +21,7 @@ type Config struct {
 
 type AuthConfig struct {
 	Attempts int
-	Timeout  time.Duration
+	Timeout  int
 }
 
 type BouncerConfig struct {
@@ -52,10 +50,10 @@ func loadConfig(file string) (config *Config, err error) {
 
 	// Set defaults.
 	if config.Auth.Attempts == 0 {
-		config.Auth.Attempts = 3
+		config.Auth.Attempts = 1
 	}
 	if config.Auth.Timeout == 0 {
-		config.Auth.Timeout = 15
+		config.Auth.Timeout = 5
 	}
 	if config.Listen == "" {
 		return config, errors.New("config: listen address must be specified")
@@ -65,10 +63,10 @@ func loadConfig(file string) (config *Config, err error) {
 	}
 
 	var bouncer BouncerConfig
-	for i := range config.Bouncer {
-		bouncer = config.Bouncer[i]
+	for id := range config.Bouncer {
+		bouncer = config.Bouncer[id]
 		if bouncer.Target == "" {
-			return config, fmt.Errorf("config/bouncer: target address must be specified (%s)", i)
+			return config, fmt.Errorf("config/bouncer: target address must be specified (%s)", id)
 		}
 	}
 

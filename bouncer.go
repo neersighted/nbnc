@@ -60,8 +60,11 @@ func bounce(client net.Conn, config *Config) {
 	log.Printf("OPEN %s", client.RemoteAddr())
 
 	// Determine which bouncer config to use.
-	var bouncer *BouncerConfig
-	if bouncer = mux(client, config); bouncer == nil {
+	var (
+		bouncer   *BouncerConfig
+		remainder []byte
+	)
+	if bouncer, remainder = handshake(client, config); bouncer == nil {
 		return
 	}
 
@@ -95,6 +98,9 @@ func bounce(client net.Conn, config *Config) {
 		log.Printf("HANGUP %s", server.RemoteAddr())
 		server.Close()
 	}()
+
+	// Write the part of the handshake not directed at us.
+	server.Write(remainder)
 
 	// Copy data client <-> server, blocking until one of them passes 'done' back.
 	var done chan bool = make(chan bool)
