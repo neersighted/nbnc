@@ -1,0 +1,13 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "UJTpOZ5IuuyoWFrS42uw/167mn0=",
+			"path": "github.com/BurntSushi/toml",
+			"revision": "f0aeabca5a127c4078abb8c8d64298b147264b55",
+			"revisionTime": "2016-04-26T10:16:13Z"
+		}
+	],
+	"rootPath": "github.com/neersighted/nbnc"
+}
