@@ -38,7 +38,7 @@ func handshake(client net.Conn, config *Config, match chan *BouncerConfig) {
 			for i := range config.Bouncer {
 				if string(matches[1]) == i {
 					bouncer = config.Bouncer[i]
-					if bouncer.Password == "" || string(matches[2]) == bouncer.Password {
+					if string(matches[2]) == bouncer.Password {
 						log.Printf("LOGIN %s %s", client.RemoteAddr(), i)
 						match <- &bouncer
 						return
