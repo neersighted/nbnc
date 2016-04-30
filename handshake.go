@@ -24,7 +24,7 @@ func handshake(client net.Conn, config *Config) (bouncer *BouncerConfig, remaind
 		reader.Read(remainder)
 
 		if bouncer != nil {
-			log.Printf("LOGIN %s %s", client.RemoteAddr())
+			log.Printf("LOGIN %s", client.RemoteAddr())
 		} else {
 			log.Printf("REJECT %s", client.RemoteAddr())
 		}
@@ -59,6 +59,10 @@ func seekshake(reader *bufio.Reader, config *Config, match chan *BouncerConfig) 
 }
 
 func matchshake(data []byte, config *Config) string {
+	if !shake.Match(data) {
+		return ""
+	}
+
 	// Attempt to match data against the handshake pattern.
 	var matches [][]byte = shake.FindSubmatch(data)
 
