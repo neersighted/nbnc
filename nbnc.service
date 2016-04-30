@@ -1,0 +1,9 @@
+[Unit]
+Description=null (transparent) bnc
+
+[Service]
+ExecStart=/usr/bin/nbnc /etc/nbnc.conf -
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
